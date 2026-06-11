@@ -493,7 +493,8 @@
     _lastStepTs: null,
     _moduleStartTs: null,
     _curModule: 0,
-    sent: false
+    completeSent: false,   // финальная запись (status=Завершён) отправлена
+    leaveSent: false       // запись о выходе (status=Не завершён) отправлена
   };
   var MODULE_OF_STEP = [0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3]; // индекс модуля для каждого шага
 
@@ -554,11 +555,16 @@
   }
 
   // отправка в Google Apps Script (no-cors, форм-данные → доходят без CORS-ошибок)
+  // reason: "complete" — финал; "leave" — закрытие недоделанным; "manual" — кнопка.
   function sendReport(reason, onDone) {
-    if (telemetry.sent && reason !== "manual") { if (onDone) onDone(true); return; }
+    reason = reason || "complete";
+    // если уже отправили ЗАВЕРШЕНИЕ — больше ничего не шлём
+    if (telemetry.completeSent) { if (onDone) onDone(true); return; }
+    // "leave" не отправляем, если задание уже завершено или завершение в процессе
+    if (reason === "leave" && (telemetry.completed || telemetry.leaveSent)) { if (onDone) onDone(true); return; }
     if (!reportConfigured()) { if (onDone) onDone(false); return; }
     var payload = buildReportPayload();
-    payload.reason = reason || "complete";
+    payload.reason = reason;
     try {
       var body = new URLSearchParams();
       Object.keys(payload).forEach(function (k) { body.append(k, payload[k]); });
@@ -566,7 +572,7 @@
       if (reason === "leave" && navigator.sendBeacon) {
         var blob = new Blob([body.toString()], { type: "application/x-www-form-urlencoded" });
         navigator.sendBeacon(REPORT_CONFIG.endpoint, blob);
-        telemetry.sent = true;
+        telemetry.leaveSent = true;
         if (onDone) onDone(true);
         return;
       }
@@ -576,7 +582,8 @@
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: body.toString()
       }).then(function () {
-        telemetry.sent = true;
+        if (reason === "complete") telemetry.completeSent = true;
+        if (reason === "leave") telemetry.leaveSent = true;
         if (onDone) onDone(true);
       }).catch(function () {
         if (onDone) onDone(false);
@@ -1684,7 +1691,6 @@
     var ss = document.getElementById("sendStatus");
     if (!reportConfigured()) { ss.textContent = "ℹ Автоотправка не настроена администратором. Скачайте отчёт."; return; }
     ss.textContent = "Повторная отправка…";
-    telemetry.sent = false;
     sendReport("manual", function (ok) {
       ss.textContent = ok ? "✓ Результат отправлен преподавателю." : "⚠ Снова не удалось. Скачайте отчёт.";
     });
@@ -1692,26 +1698,24 @@
   document.getElementById("btnRestart").addEventListener("click", function () {
     sheets = INITIAL_SHEETS.map(deepSheet); activeIndex = 0; stepIndex = 0;
     selR = 0; selC = 0; anchorR = 0; anchorC = 0;
-    // сброс телеметрии (ФИО/группу сохраняем)
+    // сброс телеметрии (ФИО/подразделение сохраняем)
     telemetry.startedAt = nowMs(); telemetry.finishedAt = null; telemetry.completed = false;
     telemetry.hints = 0; telemetry.stepLog = []; telemetry.moduleTimeMs = [0,0,0,0];
-    telemetry._lastStepTs = null; telemetry.sent = false;
+    telemetry._lastStepTs = null; telemetry.completeSent = false; telemetry.leaveSent = false;
     document.getElementById("modalComplete").classList.remove("visible");
     updateTaskBanner(); renderSheetTabs(); renderGrid();
   });
 
-  // отправка при закрытии вкладки, если не завершил
-  window.addEventListener("pagehide", function () {
+  // Отправка "Не завершён" ТОЛЬКО при реальном закрытии/перезагрузке вкладки.
+  // Намеренно НЕ используем visibilitychange — переключение вкладки/сворачивание
+  // окна не должно слать "leave" (иначе после возврата и завершения статус
+  // оставался бы ошибочно "Не завершён").
+  window.addEventListener("pagehide", function (e) {
     if (!telemetry.startedAt) return;
-    if (telemetry.completed || telemetry.sent) return;
+    if (telemetry.completed || telemetry.completeSent || telemetry.leaveSent) return;
+    // e.persisted = страница ушла в bfcache (не настоящее закрытие) — пропускаем
+    if (e && e.persisted) return;
     if (reportConfigured() && REPORT_CONFIG.sendOnLeave) sendReport("leave");
-  });
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "hidden" && telemetry.startedAt &&
-        !telemetry.completed && !telemetry.sent &&
-        reportConfigured() && REPORT_CONFIG.sendOnLeave) {
-      sendReport("leave");
-    }
   });
 
   // =====================================================================
@@ -1766,5 +1770,5 @@
   renderGrid();
 })();
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0a0d907caba8d78',t:'MTc4MTE4MzM0MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
