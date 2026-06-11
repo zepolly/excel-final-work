@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#217346">
+<title>Итоговый тренажёр Excel — Модули 1–4</title>
+<style>
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    background: #e7e7e7; color: #222;
+    display: flex; flex-direction: column; align-items: stretch;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  /* ---- Прогресс по модулям ---- */
+  .progress-bar {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;
+  }
+  .progress-step {
+    flex: 1 1 120px; background: #fff; border: 1px solid #c6c6c6; border-radius: 4px;
+    padding: 6px 8px; font-size: 11px; line-height: 1.2; color: #666; position: relative;
+  }
+  .progress-step .num {
+    display: inline-flex; width: 18px; height: 18px; border-radius: 50%;
+    background: #c6c6c6; color: #fff; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; margin-right: 6px;
+  }
+  .progress-step.active { border-color: #217346; box-shadow: 0 0 0 1px #217346 inset; color: #1a5c38; font-weight: 600; }
+  .progress-step.active .num { background: #217346; }
+  .progress-step.done .num { background: #2e9e5b; }
+  .progress-step.done::after { content: "✓"; position: absolute; top: 6px; right: 8px; color: #2e9e5b; font-weight: 700; }
+
+  .task-banner {
+    background: #fff; border: 1px solid #c6c6c6; border-radius: 4px;
+    padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+  .task-banner.success { background: #e8f5e9; border-color: #a5d6a7; }
+  .task-banner .phase {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    color: #217346; font-weight: 700; margin-bottom: 4px;
+  }
+  .task-banner p { margin: 0; font-size: 0.95rem; line-height: 1.45; }
+  .task-banner .step-counter { font-size: 11px; color: #999; margin-top: 6px; }
+
+  .excel-shell {
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
+    background: #fff; border: 1px solid #a0a0a0; border-radius: 2px; overflow: hidden;
+    max-width: 1000px; width: 100%; margin: 0 auto;
+  }
+  .title-bar {
+    display: flex; align-items: center; gap: 8px; padding: 4px 8px 6px;
+    background: linear-gradient(180deg, #fff 0%, #f3f3f3 100%);
+    border-bottom: 1px solid #d4d4d4; flex-wrap: wrap;
+  }
+  .quick-access { display: flex; gap: 2px; align-items: center; }
+  .quick-access button {
+    width: 28px; height: 24px; border: 1px solid transparent; background: transparent;
+    border-radius: 2px; cursor: pointer; font-size: 14px; line-height: 1;
+  }
+  .quick-access button:hover { background: #e5e5e5; border-color: #c6c6c6; }
+  .doc-title { flex: 1; text-align: center; font-size: 13px; color: #333; min-width: 120px; }
+
+  .ribbon-wrap { background: #f3f3f3; border-bottom: 1px solid #d4d4d4; }
+  .ribbon-tabs { display: flex; gap: 0; padding: 0 4px; border-bottom: 1px solid #d4d4d4; flex-wrap: wrap; }
+  .ribbon-tabs button {
+    padding: 6px 12px 8px; font-size: 12px; border: none; background: transparent;
+    cursor: pointer; color: #444; font-family: inherit;
+  }
+  .ribbon-tabs button:hover { color: #217346; }
+  .ribbon-tabs button.active {
+    background: #fff; color: #217346; font-weight: 600; border: 1px solid #d4d4d4;
+    border-bottom-color: #fff; margin-bottom: -1px;
+  }
+  .ribbon-panel {
+    display: none; padding: 8px 10px 10px; background: #fff; border-bottom: 1px solid #d4d4d4;
+    min-height: 72px; align-items: flex-start; gap: 12px; flex-wrap: wrap;
+  }
+  .ribbon-panel.visible { display: flex; }
+  .ribbon-group {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 0 10px 4px; border-right: 1px solid #e0e0e0;
+  }
+  .ribbon-group:last-child { border-right: none; }
+  .ribbon-group .g-label { font-size: 11px; color: #666; margin-top: 2px; }
+  .ribbon-row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .rb {
+    padding: 6px 10px; font-size: 12px; border: 1px solid #c6c6c6;
+    background: linear-gradient(180deg, #fafafa 0%, #ececec 100%); border-radius: 2px;
+    cursor: pointer; font-family: inherit; min-height: 28px;
+  }
+  .rb:hover { background: linear-gradient(180deg, #fff 0%, #e8e8e8 100%); }
+  .rb:active { background: #d8d8d8; }
+  .rb.icon-only { min-width: 32px; padding: 6px 8px; font-weight: 700; }
+  .rb.primary { background: linear-gradient(180deg, #e8f4ec 0%, #cde6d4 100%); border-color: #217346; }
+  .rb.hot { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(33,115,70,.0);} 50% { box-shadow: 0 0 0 3px rgba(33,115,70,.35);} }
+  .ribbon-group select.fmt-select {
+    min-width: 148px; max-width: min(180px, 100%); padding: 4px 8px; font-size: 12px;
+    border: 1px solid #c6c6c6; border-radius: 2px; background: #fff; font-family: inherit; cursor: pointer;
+  }
+
+  .formula-bar {
+    display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #fff;
+    border-bottom: 1px solid #d4d4d4; font-size: 12px;
+  }
+  .name-box {
+    width: 72px; padding: 3px 6px; border: 1px solid #c6c6c6; border-radius: 2px;
+    background: #fff; text-align: center; font-family: inherit;
+  }
+  .fx-label { color: #888; font-style: italic; width: 22px; text-align: center; }
+  .formula-input {
+    flex: 1; padding: 4px 8px; border: 1px solid #c6c6c6; border-radius: 2px;
+    font-family: inherit; font-size: 12px;
+  }
+
+  .grid-scroll { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: #fcfcfc; min-height: 200px; }
+  table.excel { border-collapse: collapse; font-size: 12px; user-select: none; table-layout: fixed; }
+  table.excel th, table.excel td {
+    width: 96px; min-width: 64px; height: 22px; border: 1px solid #d4d4d4; padding: 2px 5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  table.excel thead th { background: #217346; color: #fff; font-weight: 600; text-align: center; }
+  table.excel tbody th { background: #e8e8e8; color: #333; font-weight: 600; text-align: center; width: 34px; min-width: 34px; }
+  table.excel tbody td { position: relative; background: #fff; cursor: cell; text-align: right; }
+  table.excel tbody td.text-left { text-align: left; }
+  table.excel tbody td.text-center { text-align: center; }
+  table.excel tbody td.range-cell { background: #d8ead8; box-shadow: inset 0 0 0 1px #8abf95; }
+  table.excel tbody td.range-active.range-cell { background: #fff; box-shadow: none; }
+  table.excel tbody td.range-active { outline: 2px solid #217346; outline-offset: -2px; z-index: 1; }
+  table.excel tbody td.editing-cell,
+  table.excel tbody td.editing-cell.range-cell,
+  table.excel tbody td.editing-cell.range-active { background: #fff !important; box-shadow: none !important; }
+  table.excel tbody td.editing-cell.range-active { outline: 2px solid #217346; outline-offset: -2px; z-index: 1; }
+  .cell-inline-input {
+    position: absolute; inset: 0; width: 100%; height: 100%; box-sizing: border-box;
+    border: none; outline: none; box-shadow: none; padding: 2px 5px; margin: 0; font: inherit;
+    font-size: 12px; line-height: 18px; background: #fff; color: #222; caret-color: #222; z-index: 2;
+    text-align: right; border-radius: 0; -webkit-appearance: none; appearance: none;
+  }
+  table.excel tbody td.text-left .cell-inline-input { text-align: left; }
+  .cell-inline-input:focus { background: #fff; border: none; outline: none; box-shadow: none; }
+
+  .sheet-bar { display: flex; align-items: flex-end; gap: 0; background: #e1e1e1; border-top: 1px solid #b4b4b4; padding: 2px 4px 0; flex-wrap: wrap; }
+  .sheet-tab {
+    padding: 5px 14px 6px; font-size: 12px; border: 1px solid #b4b4b4; border-bottom: none;
+    background: linear-gradient(180deg, #ececec 0%, #d8d8d8 100%); cursor: pointer; max-width: 180px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: inherit;
+    border-radius: 2px 2px 0 0; margin-right: 1px;
+  }
+  .sheet-tab:hover { background: linear-gradient(180deg, #f5f5f5 0%, #e0e0e0 100%); }
+  .sheet-tab.active { background: #fff; border-color: #b4b4b4; font-weight: 600; padding-bottom: 7px; margin-bottom: -1px; }
+  .sheet-tab .color-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .sheet-add { padding: 4px 10px; font-size: 14px; border: 1px solid transparent; background: transparent; cursor: pointer; border-radius: 2px; margin-left: 4px; }
+  .sheet-add:hover { background: #d0d0d0; }
+
+  .ctx-menu {
+    position: fixed; z-index: 1000; min-width: 220px; background: #fff; border: 1px solid #b4b4b4;
+    box-shadow: 2px 2px 8px rgba(0,0,0,.15); padding: 4px 0; font-size: 12px; display: none;
+  }
+  .ctx-menu.visible { display: block; }
+  .ctx-item { padding: 6px 20px 6px 12px; cursor: pointer; white-space: nowrap; }
+  .ctx-item:hover { background: #cde6d4; }
+  .ctx-item.disabled { opacity: 0.45; pointer-events: none; }
+  .ctx-sep { height: 1px; background: #e0e0e0; margin: 4px 0; }
+  .ctx-colors { display: flex; gap: 6px; padding: 6px 12px; }
+  .ctx-color { width: 18px; height: 18px; border-radius: 3px; cursor: pointer; border: 1px solid rgba(0,0,0,.2); }
+  .ctx-color:hover { outline: 2px solid #217346; outline-offset: 1px; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 1100; display: none;
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: #fff; border: 1px solid #a0a0a0; border-radius: 2px; box-shadow: 0 4px 24px rgba(0,0,0,.2);
+    max-width: 420px; width: 100%; padding: 0; font-size: 13px;
+  }
+  .modal h3 { margin: 0; padding: 10px 12px; background: #f3f3f3; border-bottom: 1px solid #d4d4d4; font-size: 13px; font-weight: 600; }
+  .modal-body { padding: 12px 14px; }
+  .modal-body p { margin: 0 0 8px; }
+  .modal-body label { display: flex; align-items: center; gap: 8px; margin: 10px 0; cursor: pointer; }
+  .modal-body input[type="text"], .modal-body input[type="number"], .modal-body select {
+    width: 100%; padding: 6px; font-size: 13px; border: 1px solid #c6c6c6; border-radius: 2px; font-family: inherit;
+  }
+  .cf-preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .cf-preset { flex: 1 1 140px; padding: 8px; border: 1px solid #c6c6c6; border-radius: 4px; cursor: pointer; background: #fafafa; font-size: 12px; text-align: center; }
+  .cf-preset.active { border-color: #217346; background: #e8f4ec; font-weight: 600; }
+  .cf-style-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .cf-style { flex: 1 1 120px; padding: 8px; border: 1px solid #c6c6c6; border-radius: 4px; cursor: pointer; text-align: center; font-size: 12px; }
+  .cf-style.active { outline: 2px solid #217346; outline-offset: -2px; }
+  .cf-style.red { background: #ffc7ce; color: #9c0006; }
+  .cf-style.green { background: #c6efce; color: #006100; }
+  .cf-style.yellow { background: #ffeb9c; color: #9c6500; }
+  .modal-footer { padding: 10px 12px; border-top: 1px solid #d4d4d4; display: flex; justify-content: flex-end; gap: 8px; background: #fafafa; }
+  .modal-footer button { padding: 6px 16px; font-size: 12px; cursor: pointer; font-family: inherit; border-radius: 2px; border: 1px solid #a0a0a0; background: linear-gradient(180deg, #fafafa 0%, #ececec 100%); }
+  .modal-footer button.primary { background: linear-gradient(180deg, #e8f4ec 0%, #cde6d4 100%); border-color: #217346; font-weight: 600; }
+
+  .toast {
+    position: fixed; top: 50%; left: 50%; z-index: 1200; max-width: min(92vw, 460px);
+    max-height: min(70vh, 320px); overflow-y: auto; padding: 14px 18px; border-radius: 8px;
+    font-size: 13px; line-height: 1.45; color: #1a1a1a; background: #fff; border: 1px solid #b4b4b4;
+    box-shadow: 0 12px 40px rgba(0,0,0,.2); transform: translate(-50%, -50%) scale(0.96);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease, visibility 0s linear .22s;
+  }
+  .toast.visible { transform: translate(-50%, -50%) scale(1); opacity: 1; visibility: visible; transition: opacity .22s ease, transform .22s ease, visibility 0s; }
+  .toast.good { border-color: #2e9e5b; background: #eafaf0; }
+
+  .rename-input { font: inherit; width: 100%; max-width: 150px; padding: 2px 4px; border: 1px solid #217346; border-radius: 2px; }
+  .hidden { display: none !important; }
+
+  /* onboarding */
+  .onboarding-root { position: fixed; inset: 0; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+  .onboarding-root.is-open { display: flex; }
+  .onboarding-dim { position: absolute; inset: 0; background: rgba(0,0,0,.48); }
+  .onboarding-box { position: relative; z-index: 2; width: 100%; max-width: 460px; background: #fff; border-radius: 10px; padding: 22px; box-shadow: 0 12px 40px rgba(0,0,0,.22); text-align: center; }
+  .onboarding-title { margin: 0; font-size: 1.15rem; font-weight: 600; color: #222; }
+  .onboarding-subtitle { margin: 12px 0 0; font-size: 1rem; line-height: 1.5; color: #333; text-align: left; }
+  .onboarding-subtitle ul { margin: 8px 0 0; padding-left: 20px; }
+  .onboarding-subtitle li { margin: 4px 0; }
+  .onboarding-btn { margin-top: 18px; padding: 10px 28px; font-size: 15px; border: none; border-radius: 6px; background: #217346; color: #fff; cursor: pointer; font-family: inherit; width: 100%; }
+  .onboarding-btn:hover { background: #1a5c38; }
+
+  @media (max-width: 768px) {
+    .formula-input, .cell-inline-input, .name-box, .rename-input { font-size: 16px !important; }
+  }
+  @media (max-width: 600px) {
+    table.excel th, table.excel td { width: 84px; min-width: 60px; height: 28px; font-size: 11px; }
+    table.excel tbody th { width: 28px; min-width: 28px; }
+    .rb { padding: 4px 7px; min-height: 30px; font-size: 11px; }
+    .ribbon-tabs button { padding: 4px 8px; font-size: 11px; }
+    .progress-step { flex-basis: 90px; }
+  }
+</style>
+</head>
+<body>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <div class="task-banner" id="taskBanner">
+    <div class="phase" id="phaseLabel"></div>
+    <p id="taskText"></p>
+    <div class="step-counter" id="stepCounter"></div>
+  </div>
+
+  <div class="excel-shell" id="excelShell">
+    <div class="title-bar">
+      <div class="quick-access" id="quickAccess" aria-label="Панель быстрого доступа">
+        <button type="button" data-qa="save" title="Сохранить">💾</button>
+        <button type="button" data-qa="undo" title="Отменить">↶</button>
+        <button type="button" data-qa="redo" title="Вернуть">↷</button>
+      </div>
+      <div class="doc-title">Реестр полисов — Excel (итоговый тренажёр Модулей 1–4)</div>
+    </div>
+
+    <div class="ribbon-wrap">
+      <div class="ribbon-tabs" role="tablist">
+        <button type="button" class="active" data-tab="home">Главная</button>
+        <button type="button" data-tab="insert">Вставка</button>
+        <button type="button" data-tab="layout">Разметка страницы</button>
+        <button type="button" data-tab="formulas">Формулы</button>
+        <button type="button" data-tab="data">Данные</button>
+        <button type="button" data-tab="view">Вид</button>
+      </div>
+
+      <div class="ribbon-panel visible" id="panel-home" data-panel="home">
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb icon-only" id="btn-bold" title="Жирный (Ctrl+B)"><strong>Ж</strong></button>
+            <button type="button" class="rb icon-only" id="btn-italic" title="Курсив"><em>К</em></button>
+            <button type="button" class="rb icon-only" id="btn-fill" title="Цвет заливки">🎨</button>
+          </div>
+          <span class="g-label">Шрифт</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb icon-only" id="btn-align-left" title="По левому краю">⬅</button>
+            <button type="button" class="rb icon-only" id="btn-align-center" title="По центру">⬌</button>
+            <button type="button" class="rb" id="btn-merge">Объединить и поместить в центре</button>
+          </div>
+          <span class="g-label">Выравнивание</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <select id="format-select" class="fmt-select" title="Формат ячейки" aria-label="Формат числа">
+              <option value="general">Общий</option>
+              <option value="number">Числовой</option>
+              <option value="currency">Денежный</option>
+              <option value="percent">Процентный</option>
+              <option value="date">Дата</option>
+              <option value="time">Время</option>
+              <option value="text">Текстовый</option>
+            </select>
+          </div>
+          <span class="g-label">Число</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb primary" id="btn-cf">⊞ Условное форматирование ▾</button>
+          </div>
+          <span class="g-label">Стили</span>
+        </div>
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb" id="btn-sum">∑ Автосумма</button>
+          </div>
+          <span class="g-label">Редактирование</span>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="panel-insert" data-panel="insert">
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb" id="btn-table">Таблица</button>
+            <button type="button" class="rb" id="btn-chart">Диаграмма</button>
+          </div>
+          <span class="g-label">Таблицы и диаграммы</span>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="panel-layout" data-panel="layout">
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb" id="btn-margins">Поля</button>
+            <button type="button" class="rb" id="btn-orient">Ориентация ▾</button>
+          </div>
+          <span class="g-label">Параметры страницы</span>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="panel-formulas" data-panel="formulas">
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb" id="btn-fn-wizard">Вставить функцию</button>
+          </div>
+          <span class="g-label">Библиотека функций</span>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="panel-data" data-panel="data">
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb" id="btn-sort">Сортировка</button>
+            <button type="button" class="rb" id="btn-filter">Фильтр</button>
+          </div>
+          <span class="g-label">Сортировка и фильтр</span>
+        </div>
+      </div>
+
+      <div class="ribbon-panel" id="panel-view" data-panel="view">
+        <div class="ribbon-group">
+          <div class="ribbon-row">
+            <button type="button" class="rb" id="btn-gridlines">Сетка</button>
+            <button type="button" class="rb" id="btn-freeze">Закрепить области</button>
+          </div>
+          <span class="g-label">Показать</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="formula-bar">
+      <input class="name-box" id="nameBox" readonly value="A1" aria-label="Имя ячейки">
+      <span class="fx-label">fx</span>
+      <input class="formula-input" id="formulaInput" value="" aria-label="Строка формул" autocomplete="off">
+    </div>
+
+    <div class="grid-scroll" id="gridScroll" tabindex="0" aria-label="Таблица — кликните и вводите данные">
+      <table class="excel" id="grid" aria-label="Лист"></table>
+    </div>
+
+    <div class="sheet-bar" id="sheetBar"></div>
+  </div>
+
+  <!-- контекстное меню листа -->
+  <div class="ctx-menu" id="ctxMenu" role="menu"></div>
+
+  <!-- Условное форматирование -->
+  <div class="modal-overlay" id="modalCF">
+    <div class="modal">
+      <h3 id="cfTitle">Условное форматирование</h3>
+      <div class="modal-body">
+        <p>Применяется к диапазону: <strong id="cfRangeLabel">—</strong></p>
+        <p>Правило:</p>
+        <div class="cf-preset-row">
+          <div class="cf-preset" data-rule="greater">Больше…</div>
+          <div class="cf-preset" data-rule="contains">Текст содержит…</div>
+        </div>
+        <div id="cfValueWrap">
+          <p id="cfValueLabel">Форматировать ячейки, которые БОЛЬШЕ:</p>
+          <input type="text" id="cfValue" placeholder="например, 100000">
+        </div>
+        <p style="margin-top:12px;">с оформлением:</p>
+        <div class="cf-style-row" id="cfStyleRow">
+          <div class="cf-style red active" data-style="red">Светло-красная заливка, тёмно-красный текст</div>
+          <div class="cf-style green" data-style="green">Зелёная заливка, зелёный текст</div>
+          <div class="cf-style yellow" data-style="yellow">Жёлтая заливка</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btnCFCancel">Отмена</button>
+        <button type="button" class="primary" id="btnCFOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- завершение -->
+  <div class="modal-overlay" id="modalComplete" aria-modal="true" role="dialog">
+    <div class="modal">
+      <div class="modal-body" style="padding-top:20px;text-align:center;">
+        <p style="margin:0 0 10px;font-size:38px;line-height:1;">🎉</p>
+        <p id="completeMessage" style="margin:0;line-height:1.5;font-size:16px;font-weight:600;"></p>
+      </div>
+      <div class="modal-footer" style="justify-content:center;">
+        <button type="button" id="btnRestart">Пройти заново</button>
+        <button type="button" class="primary" id="btnCompleteOk">Отлично!</button>
+      </div>
+      <!-- скрытые служебные элементы (используются логикой отправки) -->
+      <div class="hidden">
+        <div id="resultSummary"></div>
+        <span id="sendStatus"></span>
+        <button type="button" id="btnDownload"></button>
+        <button type="button" id="btnResend"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- onboarding -->
+  <div id="onboardingRoot" class="onboarding-root" aria-modal="true" role="dialog">
+    <div class="onboarding-dim"></div>
+    <div class="onboarding-box">
+      <p class="onboarding-title" id="onboardingTitle">Итоговый тренажёр по Excel</p>
+      <div class="onboarding-subtitle" id="onboardingSubtitle"></div>
+      <button type="button" class="onboarding-btn" id="onboardingBtn">Начать</button>
+    </div>
+  </div>
+
+  <!-- регистрация студента (ФИО + группа) -->
+  <div id="identRoot" class="onboarding-root" aria-modal="true" role="dialog">
+    <div class="onboarding-dim"></div>
+    <div class="onboarding-box">
+      <p class="onboarding-title">Представьтесь, пожалуйста</p>
+      <div class="onboarding-subtitle" style="text-align:left;">
+        <p style="margin:0 0 4px;">ФИО:</p>
+        <input type="text" id="identName" placeholder="Иванов Иван" style="width:100%;padding:8px;font-size:14px;border:1px solid #c6c6c6;border-radius:4px;">
+        <p style="margin:12px 0 4px;">Подразделение:</p>
+        <input type="text" id="identGroup" placeholder="Отдел урегулирования" style="width:100%;padding:8px;font-size:14px;border:1px solid #c6c6c6;border-radius:4px;">
+        <p id="identError" style="margin:8px 0 0;color:#c00000;font-size:13px;display:none;">Заполните оба поля.</p>
+      </div>
+      <button type="button" class="onboarding-btn" id="identBtn">Приступить к заданию</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  // =====================================================================
+  // ⚙️ НАСТРОЙКИ ОТПРАВКИ РЕЗУЛЬТАТОВ (заполняет администратор)
+  // ---------------------------------------------------------------------
+  // Куда уходят результаты прохождения. Используется Google Apps Script
+  // Web App (см. файл google_apps_script.gs и инструкцию INSTRUCTION_отправка.md).
+  // Вставьте сюда URL вашего веб-приложения вида:
+  //   https://script.google.com/macros/s/XXXXXXXXXXXXXXXXX/exec
+  // Пока стоит заглушка PASTE_YOUR_... — отправка отключена, работает
+  // только кнопка «Скачать отчёт».
+  // =====================================================================
+  var REPORT_CONFIG = {
+    endpoint: "https://script.google.com/macros/s/AKfycbyZQL0sd_pPH_nlWxbNms1UGC0H22_sA9ne7tRlkW7igaJrizp4YdAVZlurBBTNZCxw/exec",
+    courseName: "Excel: Модули 1–4 (итоговое задание)",
+    autoSendOnComplete: true,   // отправлять автоматически при завершении
+    sendOnLeave: true           // отправлять при закрытии вкладки (даже если не завершил)
+  };
+  function reportConfigured() {
+    return REPORT_CONFIG.endpoint && REPORT_CONFIG.endpoint.indexOf("PASTE_YOUR") !== 0;
+  }
+
+  // =====================================================================
+  // 📊 ТЕЛЕМЕТРИЯ прохождения
+  // =====================================================================
+  var telemetry = {
+    student: "", group: "",
+    startedAt: null,           // timestamp начала (после ввода ФИО)
+    finishedAt: null,
+    completed: false,
+    hints: 0,                  // сколько раз показана подсказка-ошибка
+    stepLog: [],               // [{step, module, doneAt, secFromStart}]
+    moduleTimeMs: [0, 0, 0, 0],// время на каждый модуль
+    _lastStepTs: null,
+    _moduleStartTs: null,
+    _curModule: 0,
+    sent: false
+  };
+  var MODULE_OF_STEP = [0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 3]; // индекс модуля для каждого шага
+
+  function nowMs() { return Date.now(); }
+  function fmtDuration(ms) {
+    if (!ms || ms < 0) ms = 0;
+    var s = Math.round(ms / 1000);
+    var m = Math.floor(s / 60); s = s % 60;
+    return (m > 0 ? m + " мин " : "") + s + " сек";
+  }
+  function fmtTime(ts) {
+    if (!ts) return "—";
+    var d = new Date(ts);
+    var p = function (n) { return String(n).padStart(2, "0"); };
+    return p(d.getDate()) + "." + p(d.getMonth() + 1) + "." + d.getFullYear() + " " +
+           p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  function telemetryRecordStep(completedStepIndex) {
+    var ts = nowMs();
+    var mod = MODULE_OF_STEP[completedStepIndex];
+    // прибавить время к модулю предыдущего шага
+    if (telemetry._lastStepTs != null) {
+      var prevMod = MODULE_OF_STEP[completedStepIndex]; // время до завершения этого шага относим к его модулю
+      telemetry.moduleTimeMs[prevMod] += ts - telemetry._lastStepTs;
+    } else if (telemetry.startedAt) {
+      telemetry.moduleTimeMs[mod] += ts - telemetry.startedAt;
+    }
+    telemetry._lastStepTs = ts;
+    telemetry.stepLog.push({
+      step: completedStepIndex + 1,
+      module: mod + 1,
+      doneAt: fmtTime(ts),
+      secFromStart: telemetry.startedAt ? Math.round((ts - telemetry.startedAt) / 1000) : null
+    });
+  }
+
+  function buildReportPayload() {
+    var totalMs = (telemetry.finishedAt || nowMs()) - (telemetry.startedAt || nowMs());
+    return {
+      course: REPORT_CONFIG.courseName,
+      student: telemetry.student,
+      group: telemetry.group,
+      status: telemetry.completed ? "Завершён" : "Не завершён",
+      startedAt: fmtTime(telemetry.startedAt),
+      finishedAt: telemetry.completed ? fmtTime(telemetry.finishedAt) : "",
+      totalDuration: fmtDuration(totalMs),
+      stepsDone: telemetry.completed ? STEPS.length : stepIndex,
+      stepsTotal: STEPS.length,
+      hints: telemetry.hints,
+      module1Time: fmtDuration(telemetry.moduleTimeMs[0]),
+      module2Time: fmtDuration(telemetry.moduleTimeMs[1]),
+      module3Time: fmtDuration(telemetry.moduleTimeMs[2]),
+      module4Time: fmtDuration(telemetry.moduleTimeMs[3]),
+      stepLog: JSON.stringify(telemetry.stepLog),
+      submittedAt: fmtTime(nowMs())
+    };
+  }
+
+  // отправка в Google Apps Script (no-cors, форм-данные → доходят без CORS-ошибок)
+  function sendReport(reason, onDone) {
+    if (telemetry.sent && reason !== "manual") { if (onDone) onDone(true); return; }
+    if (!reportConfigured()) { if (onDone) onDone(false); return; }
+    var payload = buildReportPayload();
+    payload.reason = reason || "complete";
+    try {
+      var body = new URLSearchParams();
+      Object.keys(payload).forEach(function (k) { body.append(k, payload[k]); });
+      // sendBeacon — надёжнее при закрытии вкладки
+      if (reason === "leave" && navigator.sendBeacon) {
+        var blob = new Blob([body.toString()], { type: "application/x-www-form-urlencoded" });
+        navigator.sendBeacon(REPORT_CONFIG.endpoint, blob);
+        telemetry.sent = true;
+        if (onDone) onDone(true);
+        return;
+      }
+      fetch(REPORT_CONFIG.endpoint, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString()
+      }).then(function () {
+        telemetry.sent = true;
+        if (onDone) onDone(true);
+      }).catch(function () {
+        if (onDone) onDone(false);
+      });
+    } catch (e) {
+      if (onDone) onDone(false);
+    }
+  }
+
+  function downloadReport() {
+    var p = buildReportPayload();
+    var lines = [
+      "ОТЧЁТ О ПРОХОЖДЕНИИ ТРЕНАЖЁРА",
+      "Курс: " + p.course,
+      "Студент: " + p.student,
+      "Подразделение: " + p.group,
+      "Статус: " + p.status,
+      "Начало: " + p.startedAt,
+      "Завершение: " + (p.finishedAt || "—"),
+      "Общее время: " + p.totalDuration,
+      "Пройдено шагов: " + p.stepsDone + " из " + p.stepsTotal,
+      "Использовано подсказок/ошибок: " + p.hints,
+      "Время по модулям: М1=" + p.module1Time + "; М2=" + p.module2Time + "; М3=" + p.module3Time + "; М4=" + p.module4Time,
+      "Журнал шагов: " + p.stepLog,
+      "Сформировано: " + p.submittedAt
+    ];
+    var blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var safe = (p.student + "_" + p.group).replace(/[^\wа-яёА-ЯЁ-]+/g, "_");
+    a.href = url; a.download = "отчёт_" + safe + ".txt";
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+
+  function renderResultSummary() {
+    var p = buildReportPayload();
+    var el = document.getElementById("resultSummary");
+    if (!el) return;
+    el.innerHTML =
+      "<b>Студент:</b> " + (p.student || "—") + " &nbsp; <b>Группа:</b> " + (p.group || "—") + "<br>" +
+      "<b>Статус:</b> " + p.status + "<br>" +
+      "<b>Начало:</b> " + p.startedAt + "<br>" +
+      "<b>Завершение:</b> " + (p.finishedAt || "—") + "<br>" +
+      "<b>Общее время:</b> " + p.totalDuration + "<br>" +
+      "<b>Шагов пройдено:</b> " + p.stepsDone + " из " + p.stepsTotal + " &nbsp; <b>Подсказок:</b> " + p.hints + "<br>" +
+      "<b>Время по модулям:</b> М1 " + p.module1Time + " · М2 " + p.module2Time + " · М3 " + p.module3Time + " · М4 " + p.module4Time;
+  }
+
+  // =====================================================================
+  // Геометрия листа
+  // =====================================================================
+  var COLS = 6;      // A..F
+  var ROWS = 14;
+  var colLabel = function (i) { return String.fromCharCode(65 + i); };
+  var cellKey = function (r, c) { return r + "," + c; };
+
+  // Колонки данных (0-индекс):
+  // A=Полис, B=Продукт, C=Премия, D=Убыток, E=Статус, F=(служебная)
+  var COL_POLIS = 0, COL_PROD = 1, COL_PREMIA = 2, COL_UBYTOK = 3, COL_STATUS = 4;
+  var DATA_R0 = 1, DATA_R1 = 8; // строки данных (0-индекс) -> Excel 2..9
+  var ROW_TOTAL_PREMIA = 10;    // Excel 11
+  var ROW_AVG_UBYTOK   = 11;    // Excel 12
+  var ROW_COUNT        = 12;    // Excel 13
+  var ROW_MAX_PREMIA   = 13;    // ровно последняя строка -> добавим строку? нет, держим в пределах
+
+  // Чтобы итоги поместились — расширим ROWS
+  // (пересчёт ниже учитывает реальные значения)
+
+  // =====================================================================
+  // Исходные данные
+  // =====================================================================
+  function emptyRows(rows, cols) {
+    var out = [];
+    for (var i = 0; i < rows; i++) { var row = []; for (var j = 0; j < cols; j++) row.push(""); out.push(row); }
+    return out;
+  }
+
+  function buildRows() {
+    var r = emptyRows(ROWS, COLS);
+    r[0] = ["Полис №", "Продукт", "Премия, руб.", "Убыток, руб.", "Статус полиса", ""];
+    // строки данных 1..8 (Excel 2..9)
+    r[1] = ["П-3001", "КАСКО",     67800, 32000,  "Активен",    ""];
+    r[2] = ["П-3002", "ОСАГО",     12400, 0,      "Активен",    ""];
+    r[3] = ["П-3003", "Имущество", 158000, 240000, "Активен",   ""];
+    r[4] = ["П-3004", "ДМС",       9400,  2100,   "Расторгнут", ""];
+    r[5] = ["П-3005", "Ипотека",   45000, 0,      "Активен",    ""];
+    r[6] = ["П-3006", "Грузы",     210000, 175000, "Истёк",     ""];
+    r[7] = ["П-3007", "ОСАГО",     11800, 0,      "Активен",    ""];
+    r[8] = ["П-3008", "КАСКО",     98000, 120000, "Расторгнут", ""];
+    // блок итогов
+    r[10] = ["Итого премий, руб.", "", "", "", "", ""];
+    r[11] = ["Средний убыток, руб.", "", "", "", "", ""];
+    r[12] = ["Количество полисов", "", "", "", "", ""];
+    r[13] = ["Действующих полисов", "", "", "", "", ""];
+    return r;
+  }
+
+  var INITIAL_SHEETS = [
+    {
+      name: "таблица1",                 // М1: переименовать в "Реестр полисов"
+      tabColor: null,                   // М1: задать синий ярлычок
+      align: {},
+      bold: {},
+      fill: {},                         // ключ -> цвет заливки
+      merge: null,                      // {r,c0,c1}
+      formats: {},                      // ключ -> формат
+      cf: [],                           // условное форматирование: [{rule,col,r0,r1,value,style}]
+      rows: buildRows(),
+      orientation: "portrait"           // М4: сменить на landscape
+    }
+  ];
+
+  function deepSheet(s) {
+    return {
+      name: s.name, tabColor: s.tabColor,
+      align: Object.assign({}, s.align),
+      bold: Object.assign({}, s.bold),
+      fill: Object.assign({}, s.fill),
+      merge: s.merge ? Object.assign({}, s.merge) : null,
+      formats: Object.assign({}, s.formats || {}),
+      cf: (s.cf || []).map(function (x) { return Object.assign({}, x); }),
+      rows: s.rows.map(function (row) { return row.slice(); }),
+      orientation: s.orientation || "portrait"
+    };
+  }
+
+  var sheets = INITIAL_SHEETS.map(deepSheet);
+  var activeIndex = 0;
+  var renameIndex = -1;
+
+  // =====================================================================
+  // Ожидаемые значения
+  // =====================================================================
+  var EXP = {
+    sumPremia: 67800+12400+158000+9400+45000+210000+11800+98000, // 612400
+    avgUbytok: (32000+0+240000+2100+0+175000+0+120000)/8,        // 71137.5
+    countPolis: 8,
+    activeCount: 5
+  };
+
+  // =====================================================================
+  // ЭТАПЫ ТРЕНАЖЁРА (сквозная цепочка по модулям)
+  // =====================================================================
+  // У каждого шага: module, text, check(), [hint], [tab] куда переключить ленту
+  var STEPS = [
+    // --- Модуль 1 ---
+    {
+      module: "Модуль 1 · Работа с листами",
+      text: "Переименуйте «таблица1» в «Реестр полисов».",
+      check: function () { return sheets[0].name === "Реестр полисов"; }
+    },
+    {
+      module: "Модуль 1 · Работа с листами",
+      text: "Измените цвет ярлыка листа на синий.",
+      check: function () { return sheets[0].tabColor === "#1f4e78"; }
+    },
+    // --- Модуль 2 ---
+    {
+      module: "Модуль 2 · Форматы данных",
+      text: "Премии должны быть в денежном формате.",
+      check: function () {
+        var sh = sheets[0];
+        for (var r = DATA_R0; r <= DATA_R1; r++) { if (getFormat(sh, r, COL_PREMIA) !== "currency") return false; }
+        return true;
+      }
+    },
+    {
+      module: "Модуль 2 · Форматы данных",
+      text: "Убытки тоже должны быть в денежном формате.",
+      check: function () {
+        var sh = sheets[0];
+        for (var r = DATA_R0; r <= DATA_R1; r++) { if (getFormat(sh, r, COL_UBYTOK) !== "currency") return false; }
+        return true;
+      }
+    },
+    // --- Модуль 3 ---
+    {
+      module: "Модуль 3 · Формулы и функции",
+      text: "Посчитайте сумму всех премий в ячейке C11.",
+      check: function () {
+        var sh = sheets[0], raw = getRawCell(sh, ROW_TOTAL_PREMIA, COL_PREMIA);
+        return formulaUsesFn(raw, ["SUM","СУММ"]) && near(getCellComputed(sh, ROW_TOTAL_PREMIA, COL_PREMIA), EXP.sumPremia);
+      }
+    },
+    {
+      module: "Модуль 3 · Формулы и функции",
+      text: "Найдите средний убыток в ячейке C12.",
+      check: function () {
+        var sh = sheets[0], raw = getRawCell(sh, ROW_AVG_UBYTOK, COL_PREMIA);
+        return formulaUsesFn(raw, ["AVERAGE","СРЗНАЧ"]) && near(getCellComputed(sh, ROW_AVG_UBYTOK, COL_PREMIA), EXP.avgUbytok);
+      }
+    },
+    {
+      module: "Модуль 3 · Формулы и функции",
+      text: "Подсчитайте количество полисов в ячейке C13.",
+      check: function () {
+        var sh = sheets[0], raw = getRawCell(sh, ROW_COUNT, COL_PREMIA);
+        return formulaUsesFn(raw, ["COUNT","СЧЁТ","СЧЕТ"]) && near(getCellComputed(sh, ROW_COUNT, COL_PREMIA), EXP.countPolis);
+      }
+    },
+    // --- Модуль 4 ---
+    {
+      module: "Модуль 4 · Оформление",
+      text: "Выделите шапку таблицы полужирным шрифтом.",
+      check: function () {
+        var sh = sheets[0];
+        for (var c = 0; c <= COL_STATUS; c++) { if (!sh.bold[cellKey(0, c)]) return false; }
+        return true;
+      }
+    },
+    {
+      module: "Модуль 4 · Условное форматирование",
+      text: "С помощью условного форматирования выделите красным убытки больше 100 000 руб.",
+      check: function () {
+        return sheets[0].cf.some(function (rule) {
+          return rule.rule === "greater" && Number(rule.value) === 100000 &&
+                 rule.col === COL_UBYTOK && rule.style === "red";
+        });
+      }
+    },
+    {
+      module: "Модуль 4 · Условное форматирование",
+      text: "С помощью условного форматирования выделите зелёным действующие («Активен») полисы.",
+      check: function () {
+        return sheets[0].cf.some(function (rule) {
+          return rule.rule === "contains" && String(rule.value).toLowerCase() === "активен" &&
+                 rule.col === COL_STATUS && rule.style === "green";
+        });
+      }
+    },
+    {
+      module: "Модуль 4 · Подготовка к печати",
+      text: "Установите альбомную ориентацию страницы.",
+      check: function () { return sheets[0].orientation === "landscape"; }
+    }
+  ];
+
+  var stepIndex = 0;
+
+  var COMPLETE_MESSAGE =
+    "Вы прошли все 4 модуля: переименовали лист и задали цвет ярлычка, настроили денежные форматы, " +
+    "написали функции СУММ/СРЗНАЧ/СЧЁТ, оформили шапку, добавили два правила условного форматирования " +
+    "(убытки > 100 000 — красным, активные полисы — зелёным) и подготовили лист к печати в альбомной ориентации.";
+
+  // =====================================================================
+  // Состояние выделения / редактирования
+  // =====================================================================
+  var selR = 0, selC = 0, anchorR = 0, anchorC = 0;
+  var cellEditorInput = null;
+  var formulaEditActive = false, formulaEditCell = null, formulaPickAnchor = null;
+  var pickPointerDown = null, pickDidDrag = false;
+  var sheetPointerDown = null, sheetDidDrag = false;
+  var autoSumPickMode = false, autoSumTargetCell = null;
+  var formulaBarCommitting = false;
+  var fillPickMode = false; // режим выбора цвета заливки уже не нужен (кнопка fill = заливка выделения)
+
+  // DOM
+  var taskBanner = document.getElementById("taskBanner");
+  var phaseLabel = document.getElementById("phaseLabel");
+  var taskText = document.getElementById("taskText");
+  var stepCounter = document.getElementById("stepCounter");
+  var progressBar = document.getElementById("progressBar");
+  var grid = document.getElementById("grid");
+  var gridScroll = document.getElementById("gridScroll");
+  var sheetBar = document.getElementById("sheetBar");
+  var ctxMenu = document.getElementById("ctxMenu");
+  var toast = document.getElementById("toast");
+  var nameBox = document.getElementById("nameBox");
+  var formulaInput = document.getElementById("formulaInput");
+
+  // =====================================================================
+  // Утилиты формата/формул (адаптировано из шаблона)
+  // =====================================================================
+  function getFormat(sh, r, c) { return sh.formats[cellKey(r, c)] || "general"; }
+  function isFormulaValue(v) { return typeof v === "string" && v.trim().charAt(0) === "="; }
+  function getRawCell(sh, r, c) { return sh.rows[r][c]; }
+
+  function refToRC(ref) {
+    var m = String(ref).trim().toUpperCase().match(/^([A-Z]+)(\d+)$/);
+    if (!m) return null;
+    var col = 0;
+    for (var i = 0; i < m[1].length; i++) col = col * 26 + (m[1].charCodeAt(i) - 64);
+    col -= 1;
+    return { r: Number(m[2]) - 1, c: col };
+  }
+  function rcToRef(r, c) { return colLabel(c) + String(r + 1); }
+  function rangeRef(r0, c0, r1, c1) { var a = rcToRef(r0, c0), b = rcToRef(r1, c1); return a === b ? a : a + ":" + b; }
+  function parseRangeRef(rangeStr) {
+    var spec = String(rangeStr).trim().toUpperCase();
+    if (spec.indexOf(":") < 0) { var one = refToRC(spec); if (!one) return null; return { r0: one.r, r1: one.r, c0: one.c, c1: one.c }; }
+    var parts = spec.split(":"); if (parts.length !== 2) return null;
+    var a = refToRC(parts[0]), b = refToRC(parts[1]); if (!a || !b) return null;
+    return { r0: Math.min(a.r, b.r), r1: Math.max(a.r, b.r), c0: Math.min(a.c, b.c), c1: Math.max(a.c, b.c) };
+  }
+  function getNumericCell(sh, r, c, stack) {
+    if (!stack) stack = {};
+    var key = cellKey(r, c);
+    if (stack[key]) return NaN;
+    var v = getRawCell(sh, r, c);
+    if (isFormulaValue(v)) { stack[key] = 1; var n = evaluateFormula(sh, v, stack); delete stack[key]; return n; }
+    if (typeof v === "number") return v;
+    if (v === "" || v === null || v === undefined) return NaN;
+    var n2 = parseFloat(String(v).replace(/\s/g, "").replace(",", "."));
+    return isNaN(n2) ? NaN : n2;
+  }
+  function cellsInRange(sh, rangeStr, stack) {
+    var rg = parseRangeRef(rangeStr); if (!rg) return [];
+    var out = [];
+    for (var r = rg.r0; r <= rg.r1; r++) for (var c = rg.c0; c <= rg.c1; c++) out.push(getNumericCell(sh, r, c, stack));
+    return out;
+  }
+  function evaluateFormula(sh, formula, stack) {
+    var body = String(formula).trim().slice(1).toUpperCase();
+    var m = body.match(/^([A-ZА-ЯЁ]+)\(([^)]+)\)$/);
+    if (!m) return NaN;
+    var fn = m[1], arg = m[2].trim();
+    var nums = cellsInRange(sh, arg, stack).filter(function (x) { return typeof x === "number" && isFinite(x); });
+    if (fn === "SUM" || fn === "СУММ") return nums.reduce(function (a, b) { return a + b; }, 0);
+    if (fn === "AVERAGE" || fn === "СРЗНАЧ") { if (!nums.length) return NaN; return nums.reduce(function (a, b) { return a + b; }, 0) / nums.length; }
+    if (fn === "COUNT" || fn === "СЧЁТ" || fn === "СЧЕТ") {
+      var rg = parseRangeRef(arg); if (!rg) return NaN; var n = 0;
+      for (var r = rg.r0; r <= rg.r1; r++) for (var c = rg.c0; c <= rg.c1; c++) { var val = getNumericCell(sh, r, c, stack); if (typeof val === "number" && isFinite(val)) n += 1; }
+      return n;
+    }
+    if (fn === "MAX" || fn === "МАКС") { if (!nums.length) return NaN; return Math.max.apply(null, nums); }
+    if (fn === "MIN" || fn === "МИН") { if (!nums.length) return NaN; return Math.min.apply(null, nums); }
+    if (fn === "COUNTIF" || fn === "СЧЁТЕСЛИ" || fn === "СЧЕТЕСЛИ") return NaN; // не нужно здесь
+    return NaN;
+  }
+  function getCellComputed(sh, r, c) {
+    var v = getRawCell(sh, r, c);
+    if (isFormulaValue(v)) return evaluateFormula(sh, v);
+    if (typeof v === "number") return v;
+    return NaN;
+  }
+  function formulaUsesFn(raw, names) {
+    if (!isFormulaValue(raw)) return false;
+    var body = String(raw).trim().slice(1).toUpperCase();
+    return names.some(function (name) { return body.indexOf(name.toUpperCase()) === 0; });
+  }
+  function near(a, b) { return typeof a === "number" && isFinite(a) && Math.abs(a - b) < 0.5; }
+
+  function normalizeInputForStorage(text, fmt) {
+    var raw = String(text), t = raw.trim();
+    if (t.charAt(0) === "=") return t;
+    if (raw.length > 0 && raw.charAt(0) === "'") return raw.slice(1);
+    if (fmt === "text") return raw;
+    if (t === "") return "";
+    var num = parseFloat(t.replace(/\s/g, "").replace(",", "."));
+    if (!isNaN(num) && /^[\s\d.,+-]+$/.test(t)) return num;
+    return t;
+  }
+
+  // ----- условное форматирование: вычисление цвета ячейки -----
+  function cfStyleColors(style) {
+    if (style === "red") return { bg: "#ffc7ce", fg: "#9c0006" };
+    if (style === "green") return { bg: "#c6efce", fg: "#006100" };
+    if (style === "yellow") return { bg: "#ffeb9c", fg: "#9c6500" };
+    return null;
+  }
+  function cfMatch(rule, sh, r, c) {
+    if (rule.col !== c) return false;
+    if (r < rule.r0 || r > rule.r1) return false;
+    var v = sh.rows[r][c];
+    if (rule.rule === "greater") {
+      var n = (typeof v === "number") ? v : parseFloat(String(v).replace(/\s/g, "").replace(",", "."));
+      return !isNaN(n) && n > Number(rule.value);
+    }
+    if (rule.rule === "contains") {
+      return String(v).toLowerCase().indexOf(String(rule.value).toLowerCase()) >= 0;
+    }
+    return false;
+  }
+  function cellCfStyle(sh, r, c) {
+    for (var i = sh.cf.length - 1; i >= 0; i--) {
+      if (cfMatch(sh.cf[i], sh, r, c)) return cfStyleColors(sh.cf[i].style);
+    }
+    return null;
+  }
+
+  function formatCellDisplay(sh, r, c) {
+    var v = sh.rows[r][c], fmt = getFormat(sh, r, c);
+    if (v === "" || v === null || v === undefined) return "";
+    if (isFormulaValue(v)) {
+      var n = getCellComputed(sh, r, c);
+      if (typeof n === "number" && isFinite(n)) return n.toLocaleString("ru-RU", { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+      return "#ОШИБКА!";
+    }
+    if (fmt === "text") return String(v);
+    if (fmt === "currency" && typeof v === "number") return v.toLocaleString("ru-RU", { style: "currency", currency: "RUB", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    if (fmt === "number" && typeof v === "number") return v.toLocaleString("ru-RU", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    if (fmt === "percent" && typeof v === "number") return (v * 100).toLocaleString("ru-RU", { maximumFractionDigits: 1 }) + "%";
+    if (typeof v === "number") return String(v);
+    return String(v);
+  }
+  function rawToFormulaString(sh, r, c) {
+    var v = sh.rows[r][c];
+    if (v === "" || v === null || v === undefined) return "";
+    return String(v);
+  }
+
+  // =====================================================================
+  // Рендер
+  // =====================================================================
+  function selectionIsMultiCell() {
+    return Math.max(anchorR, selR) > Math.min(anchorR, selR) || Math.max(anchorC, selC) > Math.min(anchorC, selC);
+  }
+
+  function renderProgress() {
+    progressBar.innerHTML = "";
+    var modules = ["Модуль 1", "Модуль 2", "Модуль 3", "Модуль 4"];
+    var moduleStepRanges = [[0,1],[2,3],[4,6],[7,11]]; // индексы STEPS по модулям
+    modules.forEach(function (m, i) {
+      var rng = moduleStepRanges[i];
+      var div = document.createElement("div");
+      div.className = "progress-step";
+      var allDone = stepIndex > rng[1];
+      var inProgress = stepIndex >= rng[0] && stepIndex <= rng[1];
+      if (allDone) div.classList.add("done");
+      else if (inProgress) div.classList.add("active");
+      div.innerHTML = '<span class="num">' + (i + 1) + '</span>' + m;
+      progressBar.appendChild(div);
+    });
+  }
+
+  function updateTaskBanner() {
+    taskBanner.classList.remove("success");
+    if (stepIndex >= STEPS.length) {
+      phaseLabel.textContent = "Готово";
+      taskText.textContent = COMPLETE_MESSAGE;
+      stepCounter.textContent = "";
+      taskBanner.classList.add("success");
+      renderProgress();
+      return;
+    }
+    var s = STEPS[stepIndex];
+    phaseLabel.textContent = s.module;
+    taskText.textContent = s.text;
+    stepCounter.textContent = "Шаг " + (stepIndex + 1) + " из " + STEPS.length;
+    renderProgress();
+  }
+
+  function renderGrid() {
+    // зафиксировать редактируемое значение при перерисовке (вне pick-режима)
+    if (cellEditorInput && !formulaEditActive) {
+      var td0 = cellEditorInput.closest("td");
+      if (td0) {
+        var er = Number(td0.dataset.r), ec = Number(td0.dataset.c), sh0 = sheets[activeIndex];
+        sh0.rows[er][ec] = normalizeInputForStorage(cellEditorInput.value, getFormat(sh0, er, ec));
+      }
+      cellEditorInput = null;
+    }
+    var sh = sheets[activeIndex];
+    var rMin = Math.min(anchorR, selR), rMax = Math.max(anchorR, selR);
+    var cMin = Math.min(anchorC, selC), cMax = Math.max(anchorC, selC);
+    var isMulti = selectionIsMultiCell();
+
+    grid.innerHTML = "";
+    var thead = document.createElement("thead");
+    var hr = document.createElement("tr");
+    var corner = document.createElement("th");
+    corner.style.cursor = "cell";
+    corner.dataset.selectAll = "1";
+    hr.appendChild(corner);
+    for (var c = 0; c < COLS; c++) {
+      var th = document.createElement("th");
+      th.textContent = colLabel(c);
+      th.dataset.colHeader = String(c);
+      th.style.cursor = "pointer";
+      hr.appendChild(th);
+    }
+    thead.appendChild(hr); grid.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    for (var r = 0; r < ROWS; r++) {
+      var tr = document.createElement("tr");
+      var rh = document.createElement("th"); rh.textContent = String(r + 1); rh.dataset.rowHeader = String(r); rh.style.cursor = "pointer"; tr.appendChild(rh);
+      for (var cc = 0; cc < COLS; cc++) {
+        var td = document.createElement("td");
+        var v = sh.rows[r][cc], fmt = getFormat(sh, r, cc);
+        td.textContent = formatCellDisplay(sh, r, cc);
+        // выравнивание
+        var ck = cellKey(r, cc);
+        if (sh.align[ck] === "center") td.classList.add("text-center");
+        else if (sh.align[ck] === "left") td.classList.add("text-left");
+        else if (cc === COL_POLIS || cc === COL_PROD || cc === COL_STATUS) td.classList.add("text-left");
+        else if (fmt === "text") td.classList.add("text-left");
+        else if (typeof v === "string" && v !== "" && !isFormulaValue(v) && isNaN(parseFloat(v))) td.classList.add("text-left");
+
+        td.dataset.r = String(r); td.dataset.c = String(cc);
+        if (sh.bold[ck]) td.style.fontWeight = "700";
+        if (sh.fill[ck]) td.style.background = sh.fill[ck];
+
+        // условное форматирование (поверх обычной заливки)
+        var cfs = cellCfStyle(sh, r, cc);
+        if (cfs) { td.style.background = cfs.bg; td.style.color = cfs.fg; td.style.fontWeight = td.style.fontWeight || ""; }
+
+        if (isMulti && r >= rMin && r <= rMax && cc >= cMin && cc <= cMax) td.classList.add("range-cell");
+        if (r === selR && cc === selC) td.classList.add("range-active");
+        if (formulaEditActive && formulaEditCell && r === formulaEditCell.r && cc === formulaEditCell.c) td.classList.add("formula-pick-cell");
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    grid.appendChild(tbody);
+    syncFormulaBar();
+    syncFormatSelect();
+  }
+
+  function updateSelectionHighlight() { renderGrid(); }
+
+  function syncFormulaBar() {
+    var sh = sheets[activeIndex];
+    nameBox.value = colLabel(selC) + (selR + 1);
+    if (!cellEditorInput && !formulaEditActive) formulaInput.value = rawToFormulaString(sh, selR, selC);
+  }
+  function syncFormatSelect() {
+    var el = document.getElementById("format-select");
+    if (!el) return;
+    el.value = getFormat(sheets[activeIndex], selR, selC);
+  }
+
+  // =====================================================================
+  // Проверка прогресса
+  // =====================================================================
+  function checkProgress() {
+    if (stepIndex >= STEPS.length) return;
+    var advanced = false;
+    while (stepIndex < STEPS.length && STEPS[stepIndex].check()) {
+      telemetryRecordStep(stepIndex); // зафиксировать завершённый шаг
+      stepIndex += 1;
+      advanced = true;
+    }
+    if (advanced) {
+      updateTaskBanner();
+      if (stepIndex >= STEPS.length) {
+        telemetry.completed = true;
+        telemetry.finishedAt = nowMs();
+        var who = telemetry.student ? telemetry.student : "Вы";
+        document.getElementById("completeMessage").textContent =
+          who + ", поздравляем! Вы успешно справились с итоговым заданием первого раздела.";
+        renderResultSummary();
+        // результат отправляется преподавателю в фоне (без отдельного окна отчёта)
+        if (reportConfigured() && REPORT_CONFIG.autoSendOnComplete) {
+          sendReport("complete");
+        }
+        document.getElementById("modalComplete").classList.add("visible");
+      } else {
+        showToast("✓ Шаг выполнен! Переходите к следующему.", true);
+      }
+    }
+  }
+
+  // =====================================================================
+  // Тосты
+  // =====================================================================
+  var toastTimer = null;
+  function showToast(msg, good) {
+    toast.textContent = msg;
+    toast.classList.toggle("good", !!good);
+    toast.classList.add("visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove("visible"); }, 4200);
+  }
+  function showWrong(hint) { telemetry.hints += 1; showToast(hint, false); }
+
+  // =====================================================================
+  // Редактор ячейки
+  // =====================================================================
+  function hasPendingCellEdit() { return formulaEditActive || !!cellEditorInput; }
+
+  function flushCellEditorCommit() {
+    if (!cellEditorInput) return;
+    var td = cellEditorInput.closest("td"); if (!td) { cellEditorInput = null; return; }
+    var r = Number(td.dataset.r), c = Number(td.dataset.c), sh = sheets[activeIndex];
+    sh.rows[r][c] = normalizeInputForStorage(cellEditorInput.value, getFormat(sh, r, c));
+    cellEditorInput = null; exitFormulaPickMode();
+    checkProgress();
+  }
+  function commitFormulaBar() {
+    if (formulaBarCommitting || !hasPendingCellEdit()) return;
+    var sh = sheets[activeIndex];
+    var target = formulaEditCell || { r: selR, c: selC };
+    formulaBarCommitting = true;
+    var raw = (cellEditorInput && document.body.contains(cellEditorInput)) ? cellEditorInput.value : formulaInput.value;
+    sh.rows[target.r][target.c] = normalizeInputForStorage(raw, getFormat(sh, target.r, target.c));
+    formulaBarCommitting = false; cellEditorInput = null; exitFormulaPickMode();
+    renderGrid(); checkProgress();
+  }
+
+  function startCellEditor(r, c, initialChar) {
+    if (formulaEditActive) return;
+    if (cellEditorInput) flushCellEditorCommit();
+    selR = r; selC = c; anchorR = r; anchorC = c;
+    renderGrid();
+    var td = grid.querySelector('td[data-r="' + r + '"][data-c="' + c + '"]');
+    if (!td) return;
+    td.classList.add("editing-cell");
+    var inp = document.createElement("input");
+    inp.type = "text"; inp.className = "cell-inline-input"; inp.setAttribute("autocomplete", "off"); inp.setAttribute("spellcheck", "false");
+    inp.value = (initialChar !== undefined) ? String(initialChar) : rawToFormulaString(sheets[activeIndex], r, c);
+    td.appendChild(inp);
+    cellEditorInput = inp;
+    inp.addEventListener("input", function () {
+      formulaInput.value = inp.value;
+      syncFormulaPickFromValue(r, c, inp.value);
+    });
+    inp.addEventListener("blur", function () {
+      if (cellEditorInput !== inp) return;
+      if (formulaEditActive) return;
+      flushCellEditorCommit(); renderGrid();
+    });
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); if (formulaEditActive) commitFormulaBar(); else { flushCellEditorCommit(); renderGrid(); } }
+      else if (e.key === "Escape") { e.preventDefault(); cellEditorInput = null; exitFormulaPickMode(); inp.remove(); renderGrid(); }
+    });
+    formulaInput.value = inp.value;
+    requestAnimationFrame(function () { if (cellEditorInput !== inp) return; inp.focus(); var len = inp.value.length; inp.setSelectionRange(len, len); });
+  }
+
+  // ----- formula pick (выбор ссылок мышью) -----
+  function valueLooksLikeFormula(v) { return String(v).trim().charAt(0) === "="; }
+  function enterFormulaPickMode(r, c) { formulaEditCell = { r: r, c: c }; formulaEditActive = true; formulaPickAnchor = null; pickPointerDown = null; pickDidDrag = false; }
+  function exitFormulaPickMode() { formulaEditActive = false; formulaEditCell = null; formulaPickAnchor = null; pickPointerDown = null; pickDidDrag = false; }
+  function syncFormulaPickFromValue(r, c, value) {
+    if (valueLooksLikeFormula(value)) enterFormulaPickMode(r, c);
+    else if (formulaEditCell && formulaEditCell.r === r && formulaEditCell.c === c) exitFormulaPickMode();
+  }
+  function getActiveFormulaInput() { if (cellEditorInput) return cellEditorInput; if (formulaEditActive) return formulaInput; return null; }
+  function syncFormulaEditors(value) { formulaInput.value = value; if (cellEditorInput) cellEditorInput.value = value; }
+  function stripTrailingRef(formula) { return String(formula).replace(/([A-ZА-ЯЁ]+\d*)(:[A-ZА-ЯЁ]+\d*)?$/i, ""); }
+  function insertFormulaRef(ref) {
+    var ed = getActiveFormulaInput(); if (!ed) return;
+    var next = stripTrailingRef(ed.value) + ref; syncFormulaEditors(next);
+    var len = next.length; ed.focus(); ed.setSelectionRange(len, len);
+  }
+  function cellFromPoint(x, y) {
+    var el = document.elementFromPoint(x, y); if (!el) return null;
+    var td = el.closest && el.closest("td"); if (!td || !grid.contains(td)) return null;
+    return { r: Number(td.dataset.r), c: Number(td.dataset.c) };
+  }
+  function finishFormulaPick(endR, endC, extend) {
+    var start = formulaPickAnchor || pickPointerDown || { r: endR, c: endC };
+    var ref;
+    if (extend && formulaPickAnchor) {
+      ref = rangeRef(Math.min(formulaPickAnchor.r, endR), Math.min(formulaPickAnchor.c, endC), Math.max(formulaPickAnchor.r, endR), Math.max(formulaPickAnchor.c, endC));
+    } else if (pickDidDrag || start.r !== endR || start.c !== endC) {
+      ref = rangeRef(Math.min(start.r, endR), Math.min(start.c, endC), Math.max(start.r, endR), Math.max(start.c, endC));
+      formulaPickAnchor = { r: start.r, c: start.c };
+    } else { formulaPickAnchor = { r: endR, c: endC }; ref = rcToRef(endR, endC); }
+    insertFormulaRef(ref);
+    anchorR = formulaPickAnchor.r; anchorC = formulaPickAnchor.c; selR = endR; selC = endC;
+    updateSelectionHighlight();
+  }
+
+  // =====================================================================
+  // Мышь / тач
+  // =====================================================================
+  function isShiftClick(e) { return !!e.shiftKey || (typeof e.getModifierState === "function" && e.getModifierState("Shift")); }
+
+  // выделение целого столбца / строки / всего листа по клику на заголовок
+  function selectWholeColumn(c) {
+    if (cellEditorInput) { flushCellEditorCommit(); }
+    exitFormulaPickMode();
+    anchorR = 0; anchorC = c; selR = ROWS - 1; selC = c;
+    updateSelectionHighlight(); syncFormulaBar();
+  }
+  function selectWholeRow(r) {
+    if (cellEditorInput) { flushCellEditorCommit(); }
+    exitFormulaPickMode();
+    anchorR = r; anchorC = 0; selR = r; selC = COLS - 1;
+    updateSelectionHighlight(); syncFormulaBar();
+  }
+  function selectWholeSheet() {
+    if (cellEditorInput) { flushCellEditorCommit(); }
+    exitFormulaPickMode();
+    anchorR = 0; anchorC = 0; selR = ROWS - 1; selC = COLS - 1;
+    updateSelectionHighlight(); syncFormulaBar();
+  }
+  grid.addEventListener("mousedown", function (e) {
+    var hdr = e.target && e.target.closest && e.target.closest("th");
+    if (hdr && grid.contains(hdr)) {
+      if (hdr.dataset.colHeader !== undefined) { e.preventDefault(); selectWholeColumn(Number(hdr.dataset.colHeader)); return; }
+      if (hdr.dataset.rowHeader !== undefined) { e.preventDefault(); selectWholeRow(Number(hdr.dataset.rowHeader)); return; }
+      if (hdr.dataset.selectAll !== undefined) { e.preventDefault(); selectWholeSheet(); return; }
+    }
+    if (e.target && e.target.classList && e.target.classList.contains("cell-inline-input")) return;
+    var td = e.target && e.target.closest && e.target.closest("td"); if (!td) return;
+    var r = Number(td.dataset.r), c = Number(td.dataset.c);
+    if (formulaEditActive) {
+      e.preventDefault();
+      if (!formulaEditCell) {
+        if (cellEditorInput) { var edTd = cellEditorInput.closest("td"); if (edTd) enterFormulaPickMode(Number(edTd.dataset.r), Number(edTd.dataset.c)); }
+        else enterFormulaPickMode(selR, selC);
+      }
+      pickPointerDown = { r: r, c: c }; pickDidDrag = false; if (!formulaPickAnchor) formulaPickAnchor = { r: r, c: c };
+      return;
+    }
+    if (cellEditorInput) { flushCellEditorCommit(); renderGrid(); }
+    if (isShiftClick(e)) { selR = r; selC = c; updateSelectionHighlight(); syncFormulaBar(); return; }
+    sheetPointerDown = { r: r, c: c }; sheetDidDrag = false;
+    anchorR = r; anchorC = c; selR = r; selC = c;
+    updateSelectionHighlight(); syncFormulaBar();
+  });
+
+  document.addEventListener("mousemove", function (e) {
+    if (pickPointerDown && formulaEditActive) {
+      var cell = cellFromPoint(e.clientX, e.clientY); if (!cell) return;
+      if (cell.r !== pickPointerDown.r || cell.c !== pickPointerDown.c) pickDidDrag = true;
+      selR = cell.r; selC = cell.c; updateSelectionHighlight(); return;
+    }
+    if (!sheetPointerDown || formulaEditActive) return;
+    var cell2 = cellFromPoint(e.clientX, e.clientY); if (!cell2) return;
+    if (cell2.r !== sheetPointerDown.r || cell2.c !== sheetPointerDown.c) sheetDidDrag = true;
+    selR = cell2.r; selC = cell2.c; updateSelectionHighlight();
+  });
+
+  document.addEventListener("mouseup", function (e) {
+    if (pickPointerDown && formulaEditActive) {
+      var cell = cellFromPoint(e.clientX, e.clientY);
+      if (!cell) { pickPointerDown = null; return; }
+      finishFormulaPick(cell.r, cell.c, isShiftClick(e)); pickPointerDown = null; return;
+    }
+    if (autoSumPickMode && sheetPointerDown) {
+      var cellA = cellFromPoint(e.clientX, e.clientY); if (cellA) { selR = cellA.r; selC = cellA.c; }
+      var dragged = sheetDidDrag; sheetPointerDown = null; sheetDidDrag = false;
+      if (!dragged) { showWrong("Протяните по ячейкам диапазона для автосуммы."); return; }
+      if (applyAutoSumFromSelection()) { autoSumPickMode = false; renderGrid(); syncFormulaBar(); checkProgress(); }
+      return;
+    }
+    if (!sheetPointerDown || formulaEditActive) return;
+    var cell3 = cellFromPoint(e.clientX, e.clientY); if (cell3) { selR = cell3.r; selC = cell3.c; }
+    if (!sheetDidDrag) { if (e.detail < 2) startCellEditor(selR, selC); }
+    else { renderGrid(); syncFormulaBar(); }
+    sheetPointerDown = null; sheetDidDrag = false;
+  });
+
+  grid.addEventListener("dblclick", function (e) {
+    if (formulaEditActive) return;
+    if (e.target && e.target.classList && e.target.classList.contains("cell-inline-input")) return;
+    var td = e.target && e.target.closest && e.target.closest("td"); if (!td) return;
+    e.preventDefault(); e.stopPropagation();
+    var r = Number(td.dataset.r), c = Number(td.dataset.c);
+    sheetPointerDown = null; sheetDidDrag = false; anchorR = r; anchorC = c; selR = r; selC = c;
+    startCellEditor(r, c);
+    requestAnimationFrame(function () { if (cellEditorInput) cellEditorInput.select(); });
+  });
+
+  // touch (упрощённо)
+  grid.addEventListener("touchstart", function (e) {
+    if (e.target && e.target.classList && e.target.classList.contains("cell-inline-input")) return;
+    var t = e.changedTouches[0], cell = cellFromPoint(t.clientX, t.clientY); if (!cell) return;
+    if (formulaEditActive) {
+      e.preventDefault();
+      if (!formulaEditCell && cellEditorInput) { var edTd = cellEditorInput.closest("td"); if (edTd) enterFormulaPickMode(Number(edTd.dataset.r), Number(edTd.dataset.c)); }
+      pickPointerDown = { r: cell.r, c: cell.c }; pickDidDrag = false; if (!formulaPickAnchor) formulaPickAnchor = { r: cell.r, c: cell.c };
+      return;
+    }
+    if (cellEditorInput) { flushCellEditorCommit(); renderGrid(); }
+    sheetPointerDown = { r: cell.r, c: cell.c }; sheetDidDrag = false;
+    anchorR = cell.r; anchorC = cell.c; selR = cell.r; selC = cell.c;
+    updateSelectionHighlight(); syncFormulaBar(); e.preventDefault();
+  }, { passive: false });
+  grid.addEventListener("touchmove", function (e) {
+    var t = e.changedTouches[0];
+    if (pickPointerDown && formulaEditActive) { e.preventDefault(); var cell = cellFromPoint(t.clientX, t.clientY); if (!cell) return; if (cell.r !== pickPointerDown.r || cell.c !== pickPointerDown.c) pickDidDrag = true; selR = cell.r; selC = cell.c; updateSelectionHighlight(); return; }
+    if (!sheetPointerDown || formulaEditActive) return;
+    e.preventDefault(); var cell2 = cellFromPoint(t.clientX, t.clientY); if (!cell2) return;
+    if (cell2.r !== sheetPointerDown.r || cell2.c !== sheetPointerDown.c) sheetDidDrag = true;
+    selR = cell2.r; selC = cell2.c; updateSelectionHighlight();
+  }, { passive: false });
+  grid.addEventListener("touchend", function (e) {
+    var t = e.changedTouches[0];
+    if (pickPointerDown && formulaEditActive) { var cell = cellFromPoint(t.clientX, t.clientY); if (cell) finishFormulaPick(cell.r, cell.c, false); pickPointerDown = null; e.preventDefault(); return; }
+    if (autoSumPickMode && sheetPointerDown) {
+      var cellA = cellFromPoint(t.clientX, t.clientY); if (cellA) { selR = cellA.r; selC = cellA.c; }
+      var dragged = sheetDidDrag; sheetPointerDown = null; sheetDidDrag = false;
+      if (!dragged) showWrong("Протяните по ячейкам диапазона для автосуммы.");
+      else if (applyAutoSumFromSelection()) { autoSumPickMode = false; renderGrid(); syncFormulaBar(); checkProgress(); }
+      e.preventDefault(); return;
+    }
+    if (!sheetPointerDown || formulaEditActive) return;
+    var cell3 = cellFromPoint(t.clientX, t.clientY); if (cell3) { selR = cell3.r; selC = cell3.c; }
+    if (!sheetDidDrag) startCellEditor(selR, selC); else { renderGrid(); syncFormulaBar(); }
+    sheetPointerDown = null; sheetDidDrag = false; e.preventDefault();
+  }, { passive: false });
+
+  // печать с клавиатуры
+  gridScroll.addEventListener("keydown", function (e) {
+    if (anyModalOpen()) return;
+    if (cellEditorInput) return;
+    if (document.activeElement === formulaInput) return;
+    if (e.key === "F2") { e.preventDefault(); startCellEditor(selR, selC); return; }
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); startCellEditor(selR, selC, e.key); }
+  });
+
+  // строка формул
+  formulaInput.addEventListener("input", function () {
+    var tr = formulaEditCell || { r: selR, c: selC };
+    syncFormulaPickFromValue(tr.r, tr.c, formulaInput.value);
+    if (cellEditorInput) cellEditorInput.value = formulaInput.value;
+  });
+  formulaInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); commitFormulaBar(); }
+    else if (e.key === "Escape" && formulaEditActive) {
+      e.preventDefault(); var tr = formulaEditCell || { r: selR, c: selC };
+      formulaInput.value = rawToFormulaString(sheets[activeIndex], tr.r, tr.c);
+      exitFormulaPickMode(); cellEditorInput = null; renderGrid();
+    }
+  });
+  formulaInput.addEventListener("focus", function () {
+    // при фокусе на строке формул — открыть редактор активной ячейки
+    if (!hasPendingCellEdit()) {
+      var sh = sheets[activeIndex];
+      formulaInput.value = rawToFormulaString(sh, selR, selC);
+      enterFormulaPickMode(selR, selC);
+      // не создаём inline-input, но pick активен; commit запишет в selR,selC
+    }
+  });
+  formulaInput.addEventListener("blur", function () {
+    setTimeout(function () { if (formulaEditActive) return; if (pickPointerDown) return; if (!cellEditorInput) commitFormulaBar(); }, 150);
+  });
+
+  // =====================================================================
+  // Лента: вкладки
+  // =====================================================================
+  function activateRibbonTab(tab) {
+    document.querySelectorAll(".ribbon-tabs button").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === tab); });
+    document.querySelectorAll(".ribbon-panel").forEach(function (p) { p.classList.toggle("visible", p.getAttribute("data-panel") === tab); });
+  }
+  document.querySelectorAll(".ribbon-tabs button").forEach(function (btn) {
+    btn.addEventListener("click", function () { activateRibbonTab(btn.getAttribute("data-tab")); });
+  });
+
+  function eachSelectedCell(fn) {
+    var r0 = Math.min(anchorR, selR), r1 = Math.max(anchorR, selR);
+    var c0 = Math.min(anchorC, selC), c1 = Math.max(anchorC, selC);
+    for (var r = r0; r <= r1; r++) for (var c = c0; c <= c1; c++) fn(r, c);
+  }
+
+  // Жирный
+  function toggleBold() {
+    var sh = sheets[activeIndex];
+    // определить новое состояние по активной ячейке
+    var newState = !sh.bold[cellKey(selR, selC)];
+    eachSelectedCell(function (r, c) { sh.bold[cellKey(r, c)] = newState; });
+    renderGrid(); checkProgress();
+  }
+  document.getElementById("btn-bold").addEventListener("click", toggleBold);
+
+  // Ctrl+B / Ctrl+И — полужирный для выделения
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B" || e.key === "и" || e.key === "И")) {
+      if (anyModalOpen()) return;
+      e.preventDefault();
+      // если идёт ввод в ячейку или строку формул — не вмешиваемся
+      if (cellEditorInput || formulaEditActive) return;
+      toggleBold();
+    }
+  });
+  // Курсив (косметика)
+  document.getElementById("btn-italic").addEventListener("click", function () {
+    showToast("Курсив применён к выделению (в этом задании не проверяется).");
+  });
+  // Заливка
+  document.getElementById("btn-fill").addEventListener("click", function () {
+    var sh = sheets[activeIndex];
+    eachSelectedCell(function (r, c) { sh.fill[cellKey(r, c)] = "#fff2cc"; });
+    renderGrid();
+    showToast("Заливка применена к выделению.");
+  });
+  // Выравнивание
+  document.getElementById("btn-align-left").addEventListener("click", function () {
+    var sh = sheets[activeIndex]; eachSelectedCell(function (r, c) { sh.align[cellKey(r, c)] = "left"; }); renderGrid();
+  });
+  document.getElementById("btn-align-center").addEventListener("click", function () {
+    var sh = sheets[activeIndex]; eachSelectedCell(function (r, c) { sh.align[cellKey(r, c)] = "center"; }); renderGrid();
+  });
+  // Объединить
+  document.getElementById("btn-merge").addEventListener("click", function () {
+    if (!selectionIsMultiCell()) { showWrong("Сначала выделите несколько ячеек, чтобы объединить."); return; }
+    var sh = sheets[activeIndex];
+    eachSelectedCell(function (r, c) { sh.align[cellKey(r, c)] = "center"; });
+    renderGrid();
+    showToast("Ячейки объединены и текст по центру (в этом задании не проверяется).");
+  });
+
+  // Формат числа
+  document.getElementById("format-select").addEventListener("change", function () {
+    var fmt = this.value;
+    var sh = sheets[activeIndex];
+    eachSelectedCell(function (r, c) {
+      sh.formats[cellKey(r, c)] = fmt;
+      if (fmt === "percent") { var v = sh.rows[r][c]; if (typeof v === "number" && Math.abs(v) > 1) sh.rows[r][c] = v / 100; }
+    });
+    renderGrid(); syncFormatSelect(); checkProgress();
+  });
+
+  // =====================================================================
+  // Автосумма
+  // =====================================================================
+  function applyAutoSumFromSelection() {
+    if (!selectionIsMultiCell()) { showWrong("Протяните по ячейкам, чтобы выделить диапазон для суммы."); return false; }
+    var sumRange = rangeRef(Math.min(anchorR, selR), Math.min(anchorC, selC), Math.max(anchorR, selR), Math.max(anchorC, selC));
+    var sh = sheets[activeIndex];
+    var target = autoSumTargetCell || { r: selR, c: selC };
+    sh.rows[target.r][target.c] = "=СУММ(" + sumRange + ")";
+    selR = target.r; selC = target.c; anchorR = selR; anchorC = selC;
+    return true;
+  }
+  document.getElementById("btn-sum").addEventListener("click", function () {
+    if (cellEditorInput) flushCellEditorCommit();
+    exitFormulaPickMode();
+    autoSumPickMode = true; autoSumTargetCell = { r: selR, c: selC };
+    showToast("Автосумма: теперь протяните по ячейкам диапазона, который нужно сложить.");
+  });
+
+  // =====================================================================
+  // УСЛОВНОЕ ФОРМАТИРОВАНИЕ (модалка)
+  // =====================================================================
+  var modalCF = document.getElementById("modalCF");
+  var cfRangeLabel = document.getElementById("cfRangeLabel");
+  var cfValueWrap = document.getElementById("cfValueWrap");
+  var cfValueLabel = document.getElementById("cfValueLabel");
+  var cfValueInput = document.getElementById("cfValue");
+  var cfStyleRow = document.getElementById("cfStyleRow");
+  var cfState = { rule: "greater", style: "red", range: null };
+
+  function openCF() {
+    if (!selectionIsMultiCell() && !(selR >= DATA_R0 && selR <= DATA_R1)) {
+      // допустим и одну колонку — но требуем выделение диапазона
+    }
+    var r0 = Math.min(anchorR, selR), r1 = Math.max(anchorR, selR);
+    var c0 = Math.min(anchorC, selC), c1 = Math.max(anchorC, selC);
+    // правило применяется к одному столбцу выделения (как в Excel — к выделению)
+    cfState.range = { r0: r0, r1: r1, c0: c0, c1: c1 };
+    cfRangeLabel.textContent = rangeRef(r0, c0, r1, c1);
+    // дефолт правила
+    setCFRule("greater"); setCFStyle("red"); cfValueInput.value = "";
+    modalCF.classList.add("visible");
+    setTimeout(function () { cfValueInput.focus(); }, 50);
+  }
+  function setCFRule(rule) {
+    cfState.rule = rule;
+    document.querySelectorAll(".cf-preset").forEach(function (el) { el.classList.toggle("active", el.dataset.rule === rule); });
+    if (rule === "greater") { cfValueLabel.textContent = "Форматировать ячейки, которые БОЛЬШЕ:"; cfValueInput.placeholder = "например, 100000"; }
+    else { cfValueLabel.textContent = "Форматировать ячейки, текст которых СОДЕРЖИТ:"; cfValueInput.placeholder = "например, Активен"; }
+  }
+  function setCFStyle(style) {
+    cfState.style = style;
+    document.querySelectorAll(".cf-style").forEach(function (el) { el.classList.toggle("active", el.dataset.style === style); });
+  }
+  document.querySelectorAll(".cf-preset").forEach(function (el) { el.addEventListener("click", function () { setCFRule(el.dataset.rule); }); });
+  document.querySelectorAll(".cf-style").forEach(function (el) { el.addEventListener("click", function () { setCFStyle(el.dataset.style); }); });
+
+  document.getElementById("btn-cf").addEventListener("click", function () { activateRibbonTab("home"); openCF(); });
+  document.getElementById("btnCFCancel").addEventListener("click", function () { modalCF.classList.remove("visible"); });
+  document.getElementById("btnCFOk").addEventListener("click", function () {
+    var val = cfValueInput.value.trim();
+    if (val === "") { showWrong("Введите значение или текст для правила."); return; }
+    if (cfState.rule === "greater" && isNaN(parseFloat(val.replace(/\s/g, "").replace(",", ".")))) {
+      showWrong("Для правила «Больше…» введите число, например 100000."); return;
+    }
+    var rg = cfState.range;
+    var sh = sheets[activeIndex];
+    // применяем правило к каждому столбцу выделения отдельно
+    for (var c = rg.c0; c <= rg.c1; c++) {
+      sh.cf.push({
+        rule: cfState.rule,
+        col: c,
+        r0: rg.r0, r1: rg.r1,
+        value: cfState.rule === "greater" ? parseFloat(val.replace(/\s/g, "").replace(",", ".")) : val,
+        style: cfState.style
+      });
+    }
+    modalCF.classList.remove("visible");
+    renderGrid();
+    showToast("Правило условного форматирования применено.", true);
+    checkProgress();
+  });
+  cfValueInput.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("btnCFOk").click(); });
+
+  // =====================================================================
+  // Ориентация печати
+  // =====================================================================
+  document.getElementById("btn-orient").addEventListener("click", function (e) {
+    e.stopPropagation();
+    var sh = sheets[activeIndex];
+    ctxMenu.innerHTML = "";
+    function addOrientItem(label, value) {
+      var el = document.createElement("div");
+      el.className = "ctx-item";
+      el.textContent = (sh.orientation === value ? "✓ " : "    ") + label;
+      el.addEventListener("click", function () {
+        hideCtx();
+        sh.orientation = value;
+        showToast("Ориентация страницы: " + label + ".", value === "landscape");
+        checkProgress();
+      });
+      ctxMenu.appendChild(el);
+    }
+    addOrientItem("Книжная", "portrait");
+    addOrientItem("Альбомная", "landscape");
+    var rect = this.getBoundingClientRect();
+    ctxMenu.style.left = Math.min(rect.left, window.innerWidth - 200) + "px";
+    ctxMenu.style.top = rect.bottom + "px";
+    ctxMenu.classList.add("visible");
+  });
+
+  // прочие кнопки (косметика / подсказки)
+  ["btn-table","btn-chart","btn-margins","btn-fn-wizard","btn-sort","btn-filter","btn-gridlines","btn-freeze"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", function () { showWrong("Эта команда не входит в текущее итоговое задание."); });
+  });
+  document.getElementById("quickAccess").querySelectorAll("button").forEach(function (b) {
+    b.addEventListener("click", function () { showWrong("Панель быстрого доступа в задании не используется."); });
+  });
+
+  // =====================================================================
+  // Листы: вкладки, переименование, контекст, цвет ярлычка
+  // =====================================================================
+  function renderSheetTabs() {
+    sheetBar.innerHTML = "";
+    sheets.forEach(function (s, i) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "sheet-tab" + (i === activeIndex ? " active" : "");
+      if (s.tabColor) { var dot = document.createElement("span"); dot.className = "color-dot"; dot.style.background = s.tabColor; btn.appendChild(dot); }
+      if (renameIndex === i) {
+        var inp = document.createElement("input"); inp.type = "text"; inp.className = "rename-input"; inp.value = s.name;
+        inp.addEventListener("click", function (e) { e.stopPropagation(); });
+        inp.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { e.preventDefault(); applyRename(i, inp.value.trim()); }
+          if (e.key === "Escape") { e.preventDefault(); renameIndex = -1; renderSheetTabs(); }
+        });
+        inp.addEventListener("blur", function () { applyRename(i, inp.value.trim()); });
+        btn.appendChild(inp);
+        setTimeout(function () { inp.focus(); inp.select(); }, 0);
+      } else {
+        btn.appendChild(document.createTextNode(s.name));
+      }
+      btn.addEventListener("click", function (e) {
+        if (renameIndex === i) return;
+        if (e.detail === 2) { renameIndex = i; renderSheetTabs(); return; }
+        if (activeIndex !== i) { if (hasPendingCellEdit()) commitFormulaBar(); activeIndex = i; renderSheetTabs(); renderGrid(); }
+      });
+      btn.addEventListener("contextmenu", function (e) { e.preventDefault(); openSheetContext(i, e.clientX, e.clientY); });
+      sheetBar.appendChild(btn);
+    });
+    var addBtn = document.createElement("button"); addBtn.type = "button"; addBtn.className = "sheet-add"; addBtn.textContent = "+"; addBtn.title = "Вставить лист";
+    addBtn.addEventListener("click", function () { showWrong("В этом задании достаточно одного листа."); });
+    sheetBar.appendChild(addBtn);
+  }
+
+  function applyRename(i, name) {
+    renameIndex = -1;
+    if (!name) { renderSheetTabs(); return; }
+    sheets[i].name = name;
+    renderSheetTabs(); renderGrid(); checkProgress();
+  }
+
+  function openSheetContext(index, x, y) {
+    ctxMenu.innerHTML = "";
+    function addItem(label, fn, disabled) {
+      var el = document.createElement("div"); el.className = "ctx-item" + (disabled ? " disabled" : ""); el.textContent = label;
+      el.addEventListener("click", function () { if (disabled) return; hideCtx(); fn(); });
+      ctxMenu.appendChild(el);
+    }
+    function addSep() { var s = document.createElement("div"); s.className = "ctx-sep"; ctxMenu.appendChild(s); }
+
+    addItem("Переименовать", function () { renameIndex = index; renderSheetTabs(); });
+    addItem("Удалить", function () { showWrong("Лист удалять не нужно — это учебный файл."); });
+    addSep();
+    // подменю цвета ярлычка
+    var head = document.createElement("div"); head.className = "ctx-item"; head.textContent = "Цвет ярлыка…"; head.style.fontWeight = "600"; head.style.cursor = "default"; ctxMenu.appendChild(head);
+    var colors = document.createElement("div"); colors.className = "ctx-colors";
+    [["#1f4e78","синий"],["#c00000","красный"],["#2e9e5b","зелёный"],["#ffc000","жёлтый"]].forEach(function (pair) {
+      var sw = document.createElement("div"); sw.className = "ctx-color"; sw.style.background = pair[0]; sw.title = pair[1];
+      sw.addEventListener("click", function () { hideCtx(); sheets[index].tabColor = pair[0]; renderSheetTabs(); checkProgress(); });
+      colors.appendChild(sw);
+    });
+    ctxMenu.appendChild(colors);
+    addSep();
+    addItem("Скрыть", function () { showWrong("Не скрывайте лист в этом упражнении."); });
+
+    ctxMenu.style.left = Math.min(x, window.innerWidth - 240) + "px";
+    ctxMenu.style.top = Math.min(y, window.innerHeight - 240) + "px";
+    ctxMenu.classList.add("visible");
+  }
+  function hideCtx() { ctxMenu.classList.remove("visible"); }
+  document.addEventListener("click", function (e) { if (!ctxMenu.contains(e.target)) hideCtx(); });
+
+  // =====================================================================
+  // Модалки управления
+  // =====================================================================
+  function anyModalOpen() {
+    return ["modalCF","modalComplete","onboardingRoot","identRoot"].some(function (id) {
+      var el = document.getElementById(id);
+      return el && (el.classList.contains("visible") || el.classList.contains("is-open"));
+    });
+  }
+  document.getElementById("btnCompleteOk").addEventListener("click", function () { document.getElementById("modalComplete").classList.remove("visible"); });
+  document.getElementById("btnDownload").addEventListener("click", function () { downloadReport(); });
+  document.getElementById("btnResend").addEventListener("click", function () {
+    var ss = document.getElementById("sendStatus");
+    if (!reportConfigured()) { ss.textContent = "ℹ Автоотправка не настроена администратором. Скачайте отчёт."; return; }
+    ss.textContent = "Повторная отправка…";
+    telemetry.sent = false;
+    sendReport("manual", function (ok) {
+      ss.textContent = ok ? "✓ Результат отправлен преподавателю." : "⚠ Снова не удалось. Скачайте отчёт.";
+    });
+  });
+  document.getElementById("btnRestart").addEventListener("click", function () {
+    sheets = INITIAL_SHEETS.map(deepSheet); activeIndex = 0; stepIndex = 0;
+    selR = 0; selC = 0; anchorR = 0; anchorC = 0;
+    // сброс телеметрии (ФИО/группу сохраняем)
+    telemetry.startedAt = nowMs(); telemetry.finishedAt = null; telemetry.completed = false;
+    telemetry.hints = 0; telemetry.stepLog = []; telemetry.moduleTimeMs = [0,0,0,0];
+    telemetry._lastStepTs = null; telemetry.sent = false;
+    document.getElementById("modalComplete").classList.remove("visible");
+    updateTaskBanner(); renderSheetTabs(); renderGrid();
+  });
+
+  // отправка при закрытии вкладки, если не завершил
+  window.addEventListener("pagehide", function () {
+    if (!telemetry.startedAt) return;
+    if (telemetry.completed || telemetry.sent) return;
+    if (reportConfigured() && REPORT_CONFIG.sendOnLeave) sendReport("leave");
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden" && telemetry.startedAt &&
+        !telemetry.completed && !telemetry.sent &&
+        reportConfigured() && REPORT_CONFIG.sendOnLeave) {
+      sendReport("leave");
+    }
+  });
+
+  // =====================================================================
+  // Onboarding
+  // =====================================================================
+  (function initOnboarding() {
+    var root = document.getElementById("onboardingRoot");
+    var sub = document.getElementById("onboardingSubtitle");
+    var btn = document.getElementById("onboardingBtn");
+    sub.innerHTML =
+      "Добро пожаловать на итоговый тренажер первого раздела. И пусть удача всегда будет с вами!";
+    root.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+    btn.addEventListener("click", function () {
+      root.classList.remove("is-open");
+      // показать форму регистрации
+      document.getElementById("identRoot").classList.add("is-open");
+      setTimeout(function () { document.getElementById("identName").focus(); }, 50);
+    });
+  })();
+
+  // ----- регистрация студента -----
+  (function initIdent() {
+    var root = document.getElementById("identRoot");
+    var nameEl = document.getElementById("identName");
+    var groupEl = document.getElementById("identGroup");
+    var errEl = document.getElementById("identError");
+    var btn = document.getElementById("identBtn");
+    function submit() {
+      var nm = nameEl.value.trim(), gr = groupEl.value.trim();
+      if (!nm || !gr) { errEl.style.display = "block"; return; }
+      telemetry.student = nm; telemetry.group = gr;
+      telemetry.startedAt = nowMs();
+      telemetry._lastStepTs = null;
+      root.classList.remove("is-open");
+      document.body.style.overflow = "";
+      gridScroll.focus();
+    }
+    btn.addEventListener("click", submit);
+    [nameEl, groupEl].forEach(function (el) {
+      el.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
+    });
+  })();
+
+  // =====================================================================
+  // Старт
+  // =====================================================================
+  // начальное выделение — ярлычок листа (подсказываем кликнуть вкладку)
+  selR = 0; selC = 0; anchorR = 0; anchorC = 0;
+  updateTaskBanner();
+  renderSheetTabs();
+  renderGrid();
+})();
+</script>
+</body>
+</html>
